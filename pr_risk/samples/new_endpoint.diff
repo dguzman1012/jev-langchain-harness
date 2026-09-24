@@ -1,0 +1,18 @@
+diff --git a/src/api/routes/accounts.py b/src/api/routes/accounts.py
+index 3333333..4444444 100644
+--- a/src/api/routes/accounts.py
++++ b/src/api/routes/accounts.py
+@@ -1,6 +1,18 @@
+ from fastapi import APIRouter
+ 
+ router = APIRouter(prefix="/accounts")
+ 
+ 
++@router.post("/{account_id}/pause")
++def pause_account(account_id: str) -> dict[str, str]:
++    return {"account_id": account_id, "status": "paused"}
++
++
+ @router.get("/{account_id}")
+ def get_account(account_id: str) -> dict[str, str]:
+     return {"account_id": account_id}

@@ -1,0 +1,23 @@
+diff --git a/src/billing/invoices.py b/src/billing/invoices.py
+index 1111111..2222222 100644
+--- a/src/billing/invoices.py
++++ b/src/billing/invoices.py
+@@ -1,8 +1,16 @@
+ from sqlalchemy import select
+ from sqlalchemy.orm import Session
+ 
+ from .models import Invoice
+ 
+ 
+-def get_invoice(session: Session, invoice_id: int) -> Invoice | None:
+-    return session.get(Invoice, invoice_id)
++def overdue_invoices(session: Session, account_id: int) -> list[Invoice]:
++    return list(
++        session.scalars(
++            select(Invoice).where(
++                Invoice.account_id == account_id,
++                Invoice.status == "open",
++                Invoice.due_at < "now()",
++            )
++        )
++    )
