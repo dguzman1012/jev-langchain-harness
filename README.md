@@ -5,6 +5,7 @@ Minimal proof of concept showing **Jev** (TypeSafe System One) as a **decision l
 - **Jev** (`TypeSafeClassifier`): typed judgments (Choice / Score / Noul) with calibrated probabilities.
 - **LLM** (OpenAI via LangChain): text generation and tool selection inside `create_agent`.
 - **Harness**: experimental middleware that calls Jev at agent lifecycle hooks (model routing, tool-risk gating).
+- **PR risk**: a GitHub Action that labels each pull request `risk:high|moderate|low` and leaves a sticky comment.
 
 Inspired by [Building a harness with Jev](https://www.langchain.com/blog/building-a-harness-with-jev) and the [LangChain TypeSafe integration](https://docs.langchain.com/oss/python/integrations/providers/typesafe). Jev product docs: [docs.typesafe.ai](https://docs.typesafe.ai).
 
@@ -87,7 +88,11 @@ uv run python scripts/agent_harness.py -m "Delete all backups now"
 scripts/
   classify_email.py   # CLI email triage with TypeSafeClassifier
   agent_harness.py    # create_agent + ModelRouter + AutoMode
+pr_risk/              # PR risk classifier (Jev + path rules + GitHub Action)
+  samples/            # query / endpoint / CSS diffs
+.github/workflows/pr-risk.yml
 samples/              # email fixtures
+tests/                # policy and path-rule unit tests
 pyproject.toml
 .env.example
 ```
@@ -122,6 +127,52 @@ from langchain_typesafe.experimental.middleware import (
     ModelRouterMiddleware,
 )
 ```
+
+## 3. PR risk classifier (GitHub Action)
+
+Each pull request is labeled `risk:high`, `risk:moderate`, or `risk:low` from **path rules in code** plus a batched Jev call per file. Jev answers narrow Noul questions; the tier is decided in Python.
+
+| Tier | Review policy |
+|------|----------------|
+| `high` | Must not merge without review by someone from the data team. Queries, migrations, data models, or business logic. |
+| `moderate` | Needs 2 approvals from engineers. Endpoints, code flows, runtime chores. |
+| `low` | Ready to merge after a light review. UI/copy, tests, docs, simple fixes. |
+
+### Enable
+
+1. Create a [TypeSafe API key](https://docs.typesafe.ai).
+2. Add it as the repository secret **`TYPESAFE_API_KEY`**.
+3. Keep the workflow at `.github/workflows/pr-risk.yml`. If the secret is missing, the job logs that and exits `0` so the PR does not go red.
+
+The action writes one sticky comment (updated on re-runs) and replaces any previous `risk:*` label.
+
+### Run locally
+
+```bash
+uv sync --group dev
+uv run pytest
+uv run python -m pr_risk --sample query
+uv run python -m pr_risk --diff-file pr_risk/samples/new_endpoint.diff
+uv run python -m pr_risk --pr-url https://github.com/OWNER/REPO/pull/123
+```
+
+`--pr-url` needs `GITHUB_TOKEN`. `--github-event` is what CI uses.
+
+### Tune rules and thresholds
+
+- Path globs and skip lists: the tables at the top of `pr_risk/rules.py`.
+- Signal and confidence cutoffs: the named constants at the top of `pr_risk/policy.py` (`HIGH_SIGNAL_THRESHOLD`, `MODERATE_SIGNAL_THRESHOLD`, `LOW_CONFIDENCE`).
+- Jev questions: `pr_risk/jev.py`. Keep them narrow; do not move the tier decision into the prompt.
+
+If a deciding Noul is near 0.5 (low derived confidence), the policy bumps the tier up one step.
+
+### Optional branch protection
+
+Map the labels onto repo rules; the action only labels and comments.
+
+- `risk:high` — require a review from the data team via [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners) on data paths (`**/migrations/**`, `**/*.sql`, models/schema).
+- `risk:moderate` — require 2 approving reviews.
+- `risk:low` — keep the default light review.
 
 ## License
 
