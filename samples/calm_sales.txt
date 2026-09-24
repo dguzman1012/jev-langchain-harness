@@ -1,0 +1,10 @@
+Subject: Team plan pricing for 25 seats
+
+Hi there,
+
+We're evaluating Cursor for our engineering org (~25 developers). Could you share
+ballpark pricing for a Team plan and whether annual billing is available? No rush —
+we're comparing options for a Q3 rollout.
+
+Best,
+Jordan

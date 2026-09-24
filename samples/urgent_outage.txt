@@ -1,0 +1,11 @@
+Subject: Production API returning 503 — customers blocked
+
+Hi team,
+
+Since 06:15 UTC our main API has been returning 503 for roughly 40% of requests.
+Stripe checkout and the customer dashboard are both affected. We already rolled back
+the last deploy and the error rate is unchanged.
+
+Please treat this as an incident. I need someone on a bridge call in the next 15 minutes.
+
+— Priya, Head of Customer Success
